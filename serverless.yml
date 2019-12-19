@@ -12,6 +12,7 @@ custom:
 # Add the serverless-webpack plugin
 plugins:
   - serverless-webpack
+  - serverless-dotenv-plugin
 
 provider:
   name: aws
@@ -22,59 +23,74 @@ provider:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    NOTES_TABLE_NAME: notes
+    STRIPE_SECRET_KEY: ${env:STRIPE_SECRET_KEY}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeTable
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:us-east-1:495293810549:table/notes"
 
 functions:
-  hello:
-    handler: handler.hello
+  create:
+    handler: src/notes/create.main
     events:
       - http:
+          path: notes
+          method: post
+          cors: true
+          authorizer: aws_iam
+  update:
+    handler: src/notes/update.main
+    events:
+      - http:
+          path: notes/{id}
+          method: put
+          cors: true
+          authorizer: aws_iam
+  delete:
+    handler: src/notes/delete.main
+    events:
+      - http:
+          path: notes/{id}
+          method: delete
+          cord: true
+          authorizer: aws_iam
+  get:
+    handler: src/notes/get.main
+    events:
+      - http:
+          path: notes/{id}
           method: get
-          path: hello
+          cors: true
+          authorizer: aws_iam
+  list:
+    handler: src/notes/list.main
+    events:
+      - http:
+          path: notes
+          method: get
+          cors: true
+          authorizer: aws_iam
+  charge:
+      handler: src/billing/charge.main
+      events:
+        - http:
+            path: billing/charge
+            method: post
+            cors: true
+            authorizer: aws_iam
+
 
 resources: # CloudFormation template syntax
-  Resources:
-    # DynamoDB Section
-    usersTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: notes
-        SSESpecification:
-          SSEEnabled: true
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: noteId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: userId
-            KeyType: HASH
-          - AttributeName: noteId
-            KeyType: RANGE
+  - ${file(./resources/dynamo_db.yml)}
+  - ${file(./resources/s3.yml)}
+  - ${file(./resources/cognito.yml)}
+  - ${file(./resources/api-gateway-errors.yml)}
 
-    # S3 section
-    noteAppUploads:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: loukmi-note-app-uploads
-        CorsConfiguration:
-          CorsRules:
-            - AllowedHeaders:
-                - '*'
-              AllowedMethods:
-                - GET
-                - PUT
-                - POST
-                - HEAD
-                - DELETE
-              AllowedOrigins:
-                - '*'
-              MaxAge: 3000
-
-    # Cognito section
-    cognitoUserPool:
-      Type: AWS::Cognito::UserPool
-      Properties:
-        UserPoolName: notes-user-pool
-        AliasAttributes:
-          - email

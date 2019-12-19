@@ -1,0 +1,18 @@
+Resources:
+  noteAppUploads:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: loukmi-note-app-uploads
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+              - DELETE
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3000

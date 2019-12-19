@@ -1,0 +1,7 @@
+Resources:
+  cognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: notes-user-pool
+      AliasAttributes:
+        - email

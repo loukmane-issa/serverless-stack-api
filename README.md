@@ -1,1 +1,1 @@
-# serverless-stack-client
+# serverless-stack-api
